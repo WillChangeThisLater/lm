@@ -60,7 +60,7 @@ type responseMessage struct {
 	Content string `json:"content"`
 }
 
-type jsonSchema struct {
+type JSONSchema struct {
 	Name   string          `json:"name"`
 	Schema json.RawMessage `json:"schema"`
 	Strict bool            `json:"strict"`
@@ -70,7 +70,7 @@ type responseFormat struct {
 	Type string `json:"type"`
 
 	// optional
-	JSONSchema *jsonSchema `json:"json_schema,omitempty"`
+	JSONSchema *JSONSchema `json:"json_schema,omitempty"`
 }
 
 // See: https://platform.openai.com/docs/api-reference/chat/create for more info
@@ -250,7 +250,7 @@ func (m *OpenAIModel) MakeQuery(prompt string, imageURLs ...string) (*Query, err
 	return &q, nil
 }
 
-func (m *OpenAIModel) MakeJSONQuery(prompt string, schema *jsonSchema, imageURLs ...string) (*Query, error) {
+func (m *OpenAIModel) MakeJSONQuery(prompt string, schema *JSONSchema, imageURLs ...string) (*Query, error) {
 	// TODO: add messages for any image URLs that are passed in
 	// Make sure the model supports JSON output
 	if !m.supportsJsonOutput {

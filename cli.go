@@ -37,8 +37,10 @@ func main() {
 	// Define flags
 	modelPtr := flag.String("model", "gpt-4", "OpenAI model to use")
 	listModelsPtr := flag.Bool("list-models", false, "List all available models")
+	listPromptsPtr := flag.Bool("list-prompts", false, "List all available prompts")
 	timeoutPtr := flag.Int("timeout", 60, "Timeout for reading stdin")
 	jsonOutputPtr := flag.Bool("json-output", false, "If true, model will output JSON")
+	jsonSchemaPtr := flag.String("json-schema-file", "", "If set, will output results based on JSON schema")
 	promptPtr := flag.String("prompt", "", "If set, will feed model through a pre-defined prompt")
 	promptOnlyPtr := flag.Bool("prompt-only", false, "If set, prompt will not be fed to LLM and will just be output to stdout")
 	imageURLsPtr := flag.String("imageURLs", "", "Define one or more image URLs. Usage: --imageURLS \"url1,url2,url3\"")
@@ -52,13 +54,25 @@ func main() {
 		os.Exit(0)
 	}
 
+	// If --list-prompts is set, just list the prompts and exit
+	if *listPromptsPtr {
+		fmt.Println(prompts.ListPrompts())
+		os.Exit(0)
+	}
+
 	// Figure out if we want the model to use JSON or not
 	outputJSON := *jsonOutputPtr
+	if *jsonSchemaPtr != "" {
+		outputJSON = true
+	}
 
 	// Get image URLs, if any
-	imageURLs := strings.Split(*imageURLsPtr, ",")
-	for i := range imageURLs {
-		imageURLs[i] = strings.TrimSpace(imageURLs[i])
+	imageURLs := make([]string, 0)
+	for _, url := range strings.Split(*imageURLsPtr, ",") {
+		url = strings.TrimSpace(url)
+		if url != "" {
+			imageURLs = append(imageURLs, url)
+		}
 	}
 
 	// Read query from stdin
@@ -109,7 +123,23 @@ func main() {
 	// create the query object
 	var query *openai.Query
 	if outputJSON {
-		query, err = model.MakeJSONQuery(queryString, nil, imageURLs...)
+		jsonSchemaFile := *jsonSchemaPtr
+		var schema *openai.JSONSchema
+		if jsonSchemaFile != "" {
+			file, err := os.Open(jsonSchemaFile)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Could not open json schema file %s: %v\n", jsonSchemaFile, err)
+			}
+			defer file.Close()
+
+			schemaBytes, err := io.ReadAll(file)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Could not read json schema file %s: %v\n", jsonSchemaFile, err)
+			}
+			schema = &openai.JSONSchema{Name: "json_schema", Schema: schemaBytes, Strict: true}
+		}
+		query, err = model.MakeJSONQuery(queryString, schema, imageURLs...)
+
 	} else {
 		query, err = model.MakeQuery(queryString, imageURLs...)
 	}

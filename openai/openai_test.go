@@ -109,7 +109,7 @@ func TestJSONOutputUnstructured(t *testing.T) {
 func TestJSONOutputStructured(t *testing.T) {
 	jsonModel, _ := GetModel("gpt-4o-mini")
 	jsonStructure := []byte(`{"type": "object", "properties": {"steps": {"type": "array", "items": {"type": "object", "properties": {"explanation": {"type": "string"}, "output": {"type": "string"}}, "required": ["explanation", "output"], "additionalProperties": false}}, "final_answer": {"type": "string"}}, "required": ["steps", "final_answer"], "additionalProperties": false}`)
-	schema := jsonSchema{Name: "test-json", Schema: jsonStructure, Strict: true}
+	schema := JSONSchema{Name: "test-json", Schema: jsonStructure, Strict: true}
 	_, err := json.Marshal(schema)
 	if err != nil {
 		t.Errorf("Could not marshal JSON Schema: %v", err)

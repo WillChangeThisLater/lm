@@ -1,6 +1,7 @@
 package prompts
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,11 +14,19 @@ var prompts = map[string]Prompt{
 	"describe-json": {"Turn JSON sample into formal schema OpenAI can understand and coerce results to", openai.GetModelNoError("gpt-4o-mini"), true, describeJSON},
 }
 
+func ListPrompts() string {
+	result, err := json.Marshal(prompts)
+	if err != nil {
+		return fmt.Sprintf("Could not get prompt info: %v", err)
+	}
+	return string(result)
+}
+
 type Prompt struct {
-	Description string              `json:"description"`
-	Model       *openai.OpenAIModel `json:"model"`
-	ForceJSON   bool                `json:"force_json"`
-	BuildPrompt func(string) (string, error)
+	Description string                       `json:"description"`
+	Model       *openai.OpenAIModel          `json:"model"`
+	ForceJSON   bool                         `json:"force_json"`
+	BuildPrompt func(string) (string, error) `json:"-"`
 }
 
 func GetPrompt(name string) (*Prompt, error) {
