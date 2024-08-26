@@ -1,0 +1,104 @@
+I am about to give you sample JSON. I would like you to carefully
+analyze the sample JSON I provide to find its schema. You should output
+your result using the JSON schema language.
+
+For example, if my sample of JSON looked like this:
+
+```json
+{
+  "title": "Application of Quantum Algorithms in Interstellar Navigation: A New Frontier",
+  "authors": [
+    "Dr. Stella Voyager",
+    "Dr. Nova Star",
+    "Dr. Lyra Hunter"
+  ],
+  "abstract": "This paper investigates the utilization of quantum algorithms to improve interstellar navigation systems. By leveraging quantum superposition and entanglement, our proposed navigation system can calculate optimal travel paths through space-time anomalies more efficiently than classical methods. Experimental simulations suggest a significant reduction in travel time and fuel consumption for interstellar missions.",
+  "keywords": [
+    "Quantum algorithms",
+    "interstellar navigation",
+    "space-time anomalies",
+    "quantum superposition",
+    "quantum entanglement",
+    "space travel"
+  ]
+}
+```
+
+You would respond with the following JSON schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "title": { "type": "string" },
+    "authors": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "abstract": { "type": "string" },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["title", "authors", "abstract", "keywords"],
+  "additionalProperties": false
+}
+```
+
+Or if my example JSON looked like this:
+
+```json
+{
+  "steps": [
+    {
+      "explanation": "Start with the equation 8x + 7 = -23.",
+      "output": "8x + 7 = -23"
+    },
+    {
+      "explanation": "Subtract 7 from both sides to isolate the term with the variable.",
+      "output": "8x = -23 - 7"
+    },
+    {
+      "explanation": "Simplify the right side of the equation.",
+      "output": "8x = -30"
+    },
+    {
+      "explanation": "Divide both sides by 8 to solve for x.",
+      "output": "x = -30 / 8"
+    },
+    {
+      "explanation": "Simplify the fraction.",
+      "output": "x = -15 / 4"
+    }
+  ],
+  "final_answer": "x = -15 / 4"
+}
+```
+
+You would respond with the following JSON schema:
+
+```json
+{
+     "type": "object",
+     "properties": {
+       "steps": {
+         "type": "array",
+         "items": {
+           "type": "object",
+           "properties": {
+             "explanation": { "type": "string" },
+             "output": { "type": "string" }
+           },
+           "required": ["explanation", "output"],
+           "additionalProperties": false
+         }
+       },
+       "final_answer": { "type": "string" }
+     },
+     "required": ["steps", "final_answer"],
+     "additionalProperties": false
+}
+```
+
+The sample JSON is below.
