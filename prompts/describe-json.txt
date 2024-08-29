@@ -2,6 +2,25 @@ I am about to give you sample JSON. I would like you to carefully
 analyze the sample JSON I provide to find its schema. You should output
 your result using the JSON schema language.
 
+The sample JSON uses a subset of the true JSON schema language.
+Here are the relevant rules:
+
+  - The following types are supported:
+
+    * String
+    * Number
+    * Boolean
+    * Integer
+    * Object
+    * Array
+    * Enum
+    * anyOf
+
+  - Root objects must not be anyOf
+  - All fields must be required
+  - additionalProperties: false must always be set in objects
+
+
 For example, if my sample of JSON looked like this:
 
 ```json

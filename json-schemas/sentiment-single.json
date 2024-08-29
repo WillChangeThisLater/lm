@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "sentiment": {
+      "type": "string",
+      "enum": ["great", "good", "neutral", "bad", "terrible"]
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "required": ["sentiment", "reason"],
+  "additionalProperties": false
+}
