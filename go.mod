@@ -1,4 +1,4 @@
-module go-openai-cli
+module go-llm
 
 go 1.22.5
 

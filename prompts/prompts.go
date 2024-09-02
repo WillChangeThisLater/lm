@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	openai "go-openai-cli/openai"
+	openai "go-llm/openai"
 )
 
 var prompts = map[string]Prompt{

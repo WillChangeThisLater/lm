@@ -1,12 +1,19 @@
 ## TODO
 
-### Maintenance:
-- Add more tests
-  - Make sure `--json-output` works
-  - Add tests for the tokenizer
-  - Test all the error cases
+### Usage
 
-### Features:
+#### CLI
+```bash
+echo "1 + 1" | go-llm
+```
+
+### Build
+```bash
+cd ~/go-llm # or wherever you cloned this
+go build
+```
+
+### Features
 - Add support for `--json-schema`
 - Add support for images via `--image-urls`. Also maybe build a small CLI utility that will base64-encode
   an image provided on the CLI and produce a URL for it. Maybe something like this
@@ -44,6 +51,9 @@
     - This is a thin wrapper around `urlify-server`. The big feature it provides is that
       it can handle ngrok tunneling if/when that's needed
 
-### Usage:
-- Make sure this package can be imported into other projects
-- Make the CLI interface sleeker
+### Maintenance
+- Add more tests
+  - Make sure `--json-output` works
+  - Add tests for the tokenizer
+  - Test all the error cases
+
