@@ -4,7 +4,7 @@ import (
 	openai "github.com/WillChangeThisLater/go-llm/openai"
 )
 
-func query(modelId string, query string) (string, error) {
+func Query(modelId string, query string) (string, error) {
 	model, err := openai.GetModel(modelId)
 	if err != nil {
 		return "", err
