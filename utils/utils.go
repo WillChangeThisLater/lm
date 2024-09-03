@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	openai "github.com/WillChangeThisLater/go-llm/openai"
