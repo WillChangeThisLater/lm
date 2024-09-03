@@ -1,4 +1,4 @@
-module go-llm
+module github.com/WillChangeThisLater/go-llm
 
 go 1.22.5
 
