@@ -91,27 +91,13 @@ func main() {
 
 	// Use prompt if we must
 	if *promptPtr != "" {
-		promptName := *promptPtr
-		prompt, err := prompts.GetPrompt(promptName)
+		response, err := prompts.Query(queryString, *promptPtr, imageURLs...)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting prompt %s: %v\n", promptName, err)
+			fmt.Fprintf(os.Stderr, "Query using prompt %s failed: %v\n", *promptPtr, err)
 			os.Exit(1)
 		}
-		if prompt.Model != nil {
-			if prompt.Model.ModelId != model.ModelId {
-				fmt.Fprintf(os.Stderr, "Overwriting to use model %v specified by prompt %s\n", prompt.Model, promptName)
-				model = prompt.Model
-			}
-		}
-		if prompt.ForceJSON {
-			outputJSON = true
-		}
-		queryString, err = prompt.BuildPrompt(queryString)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not format prompt %s: %v\n", promptName, err)
-			os.Exit(1)
-
-		}
+		fmt.Println(response)
+		os.Exit(0)
 	}
 
 	// If the user only wants to see the prompt, print it and exit

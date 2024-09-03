@@ -121,3 +121,7 @@ You would respond with the following JSON schema:
 ```
 
 The sample JSON is below.
+
+```json
+{{ text }}
+```
