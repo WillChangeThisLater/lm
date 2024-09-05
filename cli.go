@@ -60,13 +60,22 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Figure out if we want the model to use JSON or not
+	// Create model
+	model, err := openai.GetModel(*modelPtr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not get model %s: %v\n", *modelPtr, err)
+		os.Exit(1)
+	}
+
+	// Figure out if we want JSON output or not
+	// if --json-output isn't set but --json-schema-file is, we assume the
+	// user (me!) wants JSON output
 	outputJSON := *jsonOutputPtr
 	if *jsonSchemaPtr != "" {
 		outputJSON = true
 	}
 
-	// Get image URLs, if any
+	// Collect image URLs, if any
 	imageURLs := make([]string, 0)
 	for _, url := range strings.Split(*imageURLsPtr, ",") {
 		url = strings.TrimSpace(url)
@@ -75,6 +84,7 @@ func main() {
 		}
 	}
 
+	// TODO: for some specific prompts we may not want to do this...
 	// Read query from stdin
 	queryString, timeoutError := readStdinWithTimeout(*timeoutPtr)
 	if timeoutError != nil {
@@ -82,11 +92,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create model
-	model, err := openai.GetModel(*modelPtr)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not get model %s: %v\n", *modelPtr, err)
-		os.Exit(1)
+	// If the user only wants to see the prompt, print it and exit
+	if *promptOnlyPtr {
+		fmt.Println(queryString)
+		os.Exit(0)
 	}
 
 	// Use prompt if we must
@@ -100,10 +109,20 @@ func main() {
 		os.Exit(0)
 	}
 
-	// If the user only wants to see the prompt, print it and exit
-	if *promptOnlyPtr {
-		fmt.Println(queryString)
-		os.Exit(0)
+	// flight check!
+	needsImageOutput := len(imageURLs) > 0
+	needsUnstructuredJson := *jsonOutputPtr
+	needsStructuredJson := *jsonSchemaPtr != ""
+	validModel, reason := model.FlightCheck(needsImageOutput, needsUnstructuredJson, needsStructuredJson)
+	if !validModel {
+		fmt.Fprintf(os.Stderr, "Model %s cannot be used for your query: %s\n", model.ModelId, reason)
+		suggestedModel, err := openai.SuggestedModel(needsImageOutput, needsUnstructuredJson, needsStructuredJson)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Could not find model to use")
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, fmt.Sprintf("Using model %s\n", suggestedModel.ModelId))
+		model = suggestedModel
 	}
 
 	// create the query object
@@ -115,12 +134,14 @@ func main() {
 			file, err := os.Open(jsonSchemaFile)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not open json schema file %s: %v\n", jsonSchemaFile, err)
+				os.Exit(1)
 			}
 			defer file.Close()
 
 			schemaBytes, err := io.ReadAll(file)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not read json schema file %s: %v\n", jsonSchemaFile, err)
+				os.Exit(1)
 			}
 			schema = &openai.JSONSchema{Name: "json_schema", Schema: schemaBytes, Strict: true}
 		}

@@ -4,12 +4,17 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
-
-	openai "github.com/WillChangeThisLater/go-llm/openai"
 )
 
+func addTestPromptWrappers() {
+	prompts["test-simple"] = PromptWrapper{"test-simple", "", "promptFiles/tests/test-simple", false, false}
+	prompts["test-json-unstructured"] = PromptWrapper{"test-json-unstructured", "", "promptFiles/tests/test-json-unstructured", true, false}
+	prompts["test-json-structured"] = PromptWrapper{"test-json-structured", "", "promptFiles/tests/test-json-structured", true, true}
+}
+
 func TestGetPrompt(t *testing.T) {
-	prompts["test-simple"] = Prompt{"test-simple", "", openai.GetModelNoError("gpt-4o-mini"), "promptFiles/test-simple", false, ""}
+	//prompts["test-simple"] = PromptWrapper{"test-simple", "", "promptFiles/tests/test-simple", false, false}
+	addTestPromptWrappers()
 
 	_, err := GetPrompt("test-simple")
 	if err != nil {
@@ -25,7 +30,8 @@ func TestGetPrompt(t *testing.T) {
 
 func TestBuildPrompt(t *testing.T) {
 
-	prompts["test-simple"] = Prompt{"test-simple", "", openai.GetModelNoError("gpt-4o-mini"), "promptFiles/test-simple", false, ""}
+	//prompts["test-simple"] = PromptWrapper{"test-simple", "", "promptFiles/tests/test-simple", false, false}
+	addTestPromptWrappers()
 
 	prompt, err := GetPrompt("test-simple")
 	if err != nil {
@@ -46,9 +52,9 @@ func TestBuildPrompt(t *testing.T) {
 
 func TestGetSchema(t *testing.T) {
 
-	prompts["test-simple-json-schema"] = Prompt{"test-simple-json-schema", "", openai.GetModelNoError("gpt-4o-mini"), "promptFiles/test-simple", true, "schemaFiles/test-simple.json"}
-
-	prompt, err := GetPrompt("test-simple-json-schema")
+	//prompts["test-json-structured"] = PromptWrapper{"test-json-structured", "", "promptFiles/tests/test-json-structured", true, true}
+	addTestPromptWrappers()
+	prompt, err := GetPrompt("test-json-structured")
 	if err != nil {
 		t.Errorf("Should have been able to get test prompt: %v", err)
 	}
@@ -64,38 +70,39 @@ func TestGetSchema(t *testing.T) {
 
 func TestQuery(t *testing.T) {
 
-	prompts["test-simple"] = Prompt{"test-simple", "", openai.GetModelNoError("gpt-4o-mini"), "promptFiles/test-simple", false, ""}
-	prompts["test-simple-json"] = Prompt{"test-simple-json", "", openai.GetModelNoError("gpt-4o-mini"), "promptFiles/test-simple", true, ""}
-	prompts["test-simple-schema"] = Prompt{"test-simple-schema", "", openai.GetModelNoError("gpt-4o-mini"), "promptFiles/test-simple", true, "schemaFiles/test-simple.json"}
+	//prompts["test-simple"] = PromptWrapper{"test-simple", "", "promptFiles/tests/test-simple", false, false}
+	//prompts["test-json-unstructured"] = PromptWrapper{"test-json-unstructured", "", "promptFiles/tests/test-json-unstructured", true, false}
+	//prompts["test-json-structured"] = PromptWrapper{"test-json-structured", "", "promptFiles/tests/test-json-structured", true, true}
+	addTestPromptWrappers()
 
 	_, err := Query("hello world", "test-simple")
 	if err != nil {
 		t.Errorf("Could not query model using test-simple prompt: %v", err)
 	}
 
-	result, err := Query("hello world", "test-simple-json")
+	result, err := Query("hello world", "test-json-unstructured")
 	if err != nil {
-		t.Errorf("Could not query model using test-simple-json prompt: %v", err)
+		t.Errorf("Could not query model using unstructured JSON: %v", err)
 	}
 	var js json.RawMessage
 	err = json.Unmarshal([]byte(result), &js)
 	if err != nil {
-		t.Errorf("Invalid JSON returned by test-simple-json prompt: %v", err)
+		t.Errorf("Invalid JSON returned by unstructured JSON prompt: %v", err)
 	}
 
 	type TestResponse struct {
 		Hello string `json:"hello"`
 	}
 	var tr TestResponse
-	result, err = Query("say hello world", "test-simple-schema")
+	result, err = Query("say hello world", "test-json-structured")
 	if err != nil {
-		t.Errorf("Could not query model using test-simple-json prompt: %v", err)
+		t.Errorf("Could not query model using structured JSON prompt: %v", err)
 	}
 	err = json.Unmarshal([]byte(result), &tr)
 	if err != nil {
-		t.Errorf("Invalid JSON returned by test-simple-schema prompt: %v", err)
+		t.Errorf("Invalid JSON returned by structured JSON prompt: %v", err)
 	}
 	if !strings.Contains(strings.ToLower(tr.Hello), "world") {
-		t.Errorf("Invalid response: expected 'world' to be in response, got %s", tr.Hello)
+		t.Errorf("Invalid response: expected 'world' to be in response of structured JSON prompt, got %s", tr.Hello)
 	}
 }

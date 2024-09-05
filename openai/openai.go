@@ -13,19 +13,20 @@ import (
 )
 
 type OpenAIModel struct {
-	ModelId             string `json:"model_id"`
-	ContextWindowSize   int    `json:"context_window_size"`
-	TokenizerName       string `json:"tokenizer_name"`
-	supportsJsonOutput  bool
-	supportsImageOutput bool
+	ModelId                  string `json:"model_id"`
+	ContextWindowSize        int    `json:"context_window_size"`
+	TokenizerName            string `json:"tokenizer_name"`
+	SupportsImageOutput      bool   `json:"supports_image"`
+	SupportsUnstructuredJson bool   `json:"supports_unstructured_json"`
+	SupportsStructuredJson   bool   `json:"supports_structured_json"`
 }
 
 var models = map[string]OpenAIModel{
-	"gpt-3.5-turbo": {"gpt-3.5-turbo", 4096, "cl100k_base", false, false},
-	"gpt-4":         {"gpt-4", 8192, "cl100k_base", false, false},
-	"gpt-4-turbo":   {"gpt-4-turbo", 128000, "cl100k_base", false, true},
-	"gpt-4o":        {"gpt-4o", 128000, "cl100k_base", false, true},
-	"gpt-4o-mini":   {"gpt-4o-mini", 128000, "cl100k_base", true, true},
+	"gpt-3.5-turbo": {"gpt-3.5-turbo", 4096, "cl100k_base", false, false, false},
+	"gpt-4":         {"gpt-4", 8192, "cl100k_base", false, false, false},
+	"gpt-4o":        {"gpt-4o", 128000, "cl100k_base", true, true, false},
+	"gpt-4-turbo":   {"gpt-4-turbo", 128000, "cl100k_base", true, true, true},
+	"gpt-4o-mini":   {"gpt-4o-mini", 128000, "cl100k_base", true, true, true},
 }
 
 type Query struct {
@@ -111,6 +112,30 @@ func getLargestModel() *OpenAIModel {
 		}
 	}
 	return largestModel
+}
+
+func (m *OpenAIModel) FlightCheck(needsImage bool, needsUnstructuredJSON bool, needsStructuredJSON bool) (bool, string) {
+	if needsImage && !m.SupportsImageOutput {
+		return false, "Model does not support image output"
+	}
+	if needsUnstructuredJSON && !m.SupportsUnstructuredJson {
+		return false, "Model does not support unstructured JSON"
+	}
+	if needsStructuredJSON && !m.SupportsStructuredJson {
+		return false, "Model does not support structured JSON"
+	}
+	return true, ""
+}
+
+// TODO: maybe add context here?
+func SuggestedModel(needsImage bool, needsUnstructuredJSON bool, needsStructuredJSON bool) (*OpenAIModel, error) {
+	for _, model := range models {
+		valid, _ := model.FlightCheck(needsImage, needsUnstructuredJSON, needsStructuredJSON)
+		if valid {
+			return &model, nil
+		}
+	}
+	return nil, errors.New("Could not find suggested model given your constraints")
 }
 
 func ModelInfoString() string {
@@ -211,10 +236,12 @@ func createUserImageMessages(prompt string, imageURLs ...string) *requestMessage
 	return &systemMessage
 }
 
-func getJSONModelIds() []string {
+func getJSONModelIds(structured bool) []string {
 	modelsWithJSON := make([]string, 0)
 	for _, model := range models {
-		if model.supportsJsonOutput {
+		if structured && model.SupportsStructuredJson {
+			modelsWithJSON = append(modelsWithJSON, model.ModelId)
+		} else if !structured && model.SupportsUnstructuredJson {
 			modelsWithJSON = append(modelsWithJSON, model.ModelId)
 		}
 	}
@@ -224,7 +251,7 @@ func getJSONModelIds() []string {
 func getVisionModelIds() []string {
 	modelsWithVision := make([]string, 0)
 	for _, model := range models {
-		if model.supportsImageOutput {
+		if model.SupportsImageOutput {
 			modelsWithVision = append(modelsWithVision, model.ModelId)
 		}
 	}
@@ -236,7 +263,7 @@ func (m *OpenAIModel) MakeQuery(prompt string, imageURLs ...string) (*Query, err
 	systemMessage := createSystemMessage("")
 	var userMessage *requestMessage
 
-	if len(imageURLs) > 0 && !m.supportsImageOutput {
+	if len(imageURLs) > 0 && !m.SupportsImageOutput {
 		return nil, errors.New(fmt.Sprintf("Model %s does not support images. Models that do: %v", m.ModelId, getVisionModelIds()))
 	}
 
@@ -251,19 +278,20 @@ func (m *OpenAIModel) MakeQuery(prompt string, imageURLs ...string) (*Query, err
 }
 
 func (m *OpenAIModel) MakeJSONQuery(prompt string, schema *JSONSchema, imageURLs ...string) (*Query, error) {
-	// TODO: add messages for any image URLs that are passed in
-	// Make sure the model supports JSON output
-	if !m.supportsJsonOutput {
-		return nil, errors.New(fmt.Sprintf("Model %s does not support JSON output. Models that do: %v", m.ModelId, getJSONModelIds()))
-	}
-	if len(imageURLs) > 0 && !m.supportsImageOutput {
+	if len(imageURLs) > 0 && !m.SupportsImageOutput {
 		return nil, errors.New(fmt.Sprintf("Model %s does not support images. Models that do: %v", m.ModelId, getVisionModelIds()))
 	}
 
 	var jsonFormat responseFormat
 	if schema == nil {
+		if !m.SupportsUnstructuredJson {
+			return nil, errors.New(fmt.Sprintf("Model %s does not support unstructured JSON output. Models that might: %v", m.ModelId, getJSONModelIds(false)))
+		}
 		jsonFormat = responseFormat{Type: "json_object"}
 	} else {
+		if !m.SupportsStructuredJson {
+			return nil, errors.New(fmt.Sprintf("Model %s does not support structured JSON output. Models that might: %v", m.ModelId, getJSONModelIds(true)))
+		}
 		jsonFormat = responseFormat{Type: "json_schema", JSONSchema: schema}
 	}
 

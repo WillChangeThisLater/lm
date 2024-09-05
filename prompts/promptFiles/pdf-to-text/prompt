@@ -1,0 +1,78 @@
+The following image(s) represent pages from a PDF
+file. Return the text contained in the images.
+
+Do not add any explanations. Transcribe the image
+to text as faithfully as you can.
+
+If you see an image that is easy to convert to ASCII
+(e.g. a table), convert it in a nice, human readable
+format. If the image cannot be converted nicely,
+you should add the text <could not convert image>
+to your output instead.
+
+Your response should be in the following JSON format.
+
+```json
+{
+    "pageCount": 10,
+    "content": [
+    	"Image 1 content...",
+	"Image 2 content...",
+	"...",
+	"Image 10 content"
+    ]
+}
+```
+
+IMPORTANT NOTES:
+****************
+
+You should not concatenate the content of one image
+with the content of another. For example, this is
+NOT good output, because the contents of image 1 and
+image 2 are mixed together in the first element
+of the array.
+
+```json
+{
+    "pageCount": 10,
+    "content": [
+    	"Image 1 content... Image 2 content...",
+	"...",
+	"Image n content"
+    ]
+}
+```
+
+Likewise, you should not create multiple entries in the
+array for one image. For example, this is NOT good output,
+because the contents of image 1 are split between the
+first and second elements of the array
+
+```json
+{
+    "pageCount": 10,
+    "content": [
+    	"Image 1 content...",
+    	"More Image 1 content...",
+    	"Image 2 content...",
+	"...",
+	"Image n content"
+    ]
+}
+```
+
+Make sure to process EVERY image included in the input.
+'pageCount' should equal the number of images
+you have processed, and should always be equal to the
+length of the content array.
+
+Note that PDFs often contain sensitive information.
+Feel free to redact that using a <redacted> tag. As
+a general rule: if an OpenAI content filter would
+flag the content as sensitive, redact it. This is
+a tricky thing to get right given that some information
+that may look like PII is actually public information
+(for example, the names of some employees show up in a 10Q,
+as does the company telephone number, etc.). When you're
+confused, use your best judgement, but err on the safe side.

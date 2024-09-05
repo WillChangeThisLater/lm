@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "properties": {
+    "pageCount": {
+      "type": "integer"
+    },
+    "content": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["pageCount", "content"],
+  "additionalProperties": false
+}
+
