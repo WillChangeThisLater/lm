@@ -33,6 +33,12 @@ curl -o /tmp/pyramid.jpg https://upload.wikimedia.org/wikipedia/commons/e/e3/Khe
 echo "Which of these buildings is older?" | lm --imageFiles "/tmp/colosseum.jpg,/tmp/pyramid.jpg"
 ```
 
+#### Screenshot
+
+```bash
+echo "Focus on the screenshot with YouTube open. How far am I through the video?" | lm --screenshot
+```
+
 #### Unstrucured JSON output
 
 ```bash
