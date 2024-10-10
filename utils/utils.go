@@ -6,12 +6,18 @@ import (
 	"fmt"
 	"image/png"
 	"log"
+	"log/slog"
 	"mime"
 	"os"
 	"path/filepath"
 
 	openai "github.com/WillChangeThisLater/lm/openai"
 	"github.com/kbinani/screenshot"
+
+	"github.com/docker/docker/pkg/namesgenerator"
+	gowitnessLog "github.com/sensepost/gowitness/pkg/log"
+	"github.com/sensepost/gowitness/pkg/runner"
+	driver "github.com/sensepost/gowitness/pkg/runner/drivers"
 )
 
 func Query(modelId string, query string) (string, error) {
@@ -74,4 +80,55 @@ func TakeScreenshots() ([]string, error) {
 	}
 
 	return fileNames, nil
+}
+
+// use array of urls since this has a bunch of startup overhead
+func SiteScreenshots(urls []string) ([]string, error) {
+	options := runner.NewDefaultOptions()
+	options.Scan.ScreenshotToWriter = false
+	options.Scan.ScreenshotSkipSave = false
+	dirName := namesgenerator.GetRandomName(0)
+	dirPath := fmt.Sprintf("/tmp/screenshots-%s", dirName)
+	options.Scan.ScreenshotPath = dirPath
+
+	logger := slog.New(gowitnessLog.Logger)
+	driver, err := driver.NewChromedp(logger, *options)
+	if err != nil {
+		log.Printf("Failed to create chrome driver : %s\n", driver)
+		return nil, err
+	}
+
+	runner, err := runner.NewRunner(logger, driver, *options, nil)
+	if err != nil {
+		log.Printf("Failed to create runner: %v\n", err)
+		return nil, err
+	}
+
+	go func() {
+		for _, url := range urls {
+			runner.Targets <- url
+		}
+		close(runner.Targets)
+	}()
+	runner.Run()
+	runner.Close()
+
+	files, err := os.ReadDir(dirPath)
+	if err != nil {
+		log.Printf("Could not read from temp gowitness screenshot directory %s: %v\n", dirPath, err)
+		return nil, err
+	}
+
+	paths := make([]string, 0)
+	for _, file := range files {
+		fullFilePath := filepath.Join(dirPath, file.Name())
+		paths = append(paths, fullFilePath)
+	}
+
+	// sometimes this will fail for one or more URLs
+	// don't freak out, just write a warning and soldier on
+	if len(urls) != len(paths) {
+		log.Printf("Warning: it looks like gowitness could not screenshot some URLs (expected %d screenshots, got %d)\n", err, len(urls), len(paths))
+	}
+	return paths, nil
 }

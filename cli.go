@@ -47,6 +47,7 @@ func main() {
 	imageURLsPtr := flag.String("imageURLs", "", "Define one or more image URLs. Usage: --imageURLS \"url1,url2,url3\"")
 	imageFilesPtr := flag.String("imageFiles", "", "Define one or more image files. Usage: --imageFiles \"file1,file2,file3\"")
 	screenshotPtr := flag.Bool("screenshot", false, "If set, screenshots of all monitors will be taken and used as image file input")
+	sitesPtr := flag.String("sites", "", "Define one or more sites to scrape")
 
 	// Parse flags
 	flag.Parse()
@@ -97,6 +98,30 @@ func main() {
 				os.Exit(1)
 			}
 			imageURLs = append(imageURLs, url)
+		}
+	}
+
+	// Take screenshots of sites, if needed
+	urls := make([]string, 0)
+	for _, url := range strings.Split(*sitesPtr, ",") {
+		url = strings.TrimSpace(url)
+		if url != "" {
+			urls = append(urls, url)
+		}
+	}
+	if len(urls) > 0 {
+		fileNames, err := utils.SiteScreenshots(urls)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Could not generate screenshots for %+v: %v\n", fileNames, err)
+			os.Exit(1)
+		}
+		for _, fileName := range fileNames {
+			encoded, err := utils.GetImageURL(fileName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Could not generate base64 encoding for file %s: %v\n", fileName, err)
+				os.Exit(1)
+			}
+			imageURLs = append(imageURLs, encoded)
 		}
 	}
 
