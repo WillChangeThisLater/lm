@@ -88,12 +88,15 @@ func main() {
 
 	// To the existing url list, add encoded images
 	for _, fileName := range strings.Split(*imageFilesPtr, ",") {
-		url, err := utils.GetImageURL(fileName)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not generate base64 encoding for file %s: %v\n", fileName, err)
-			os.Exit(1)
+		fileName = strings.TrimSpace(fileName)
+		if fileName != "" {
+			url, err := utils.GetImageURL(fileName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Could not generate base64 encoding for file %s: %v\n", fileName, err)
+				os.Exit(1)
+			}
+			imageURLs = append(imageURLs, url)
 		}
-		imageURLs = append(imageURLs, url)
 	}
 
 	// TODO: for some specific prompts we may not want to do this...
