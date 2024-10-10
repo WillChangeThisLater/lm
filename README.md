@@ -3,13 +3,17 @@
 ### Usage
 
 #### CLI
+
+Basic usage:
+
 ```bash
 echo "1 + 1" | lm
 ```
 
 ### Build
 ```bash
-cd ~/lm # or wherever you cloned this
+git clone https://github.com/WillChangeThisLater/lm
+cd lm
 go build
 ```
 
@@ -19,7 +23,7 @@ go build
   an image provided on the CLI and produce a URL for it. Maybe something like this
 
   ```bash
-  echo "Are the following images the same? Why or why not" | llm --image-urls "$(urlify image1.png)" "$(urlify image2.png)"
+  echo "Are the following images the same? Why or why not" | lm --image-urls "$(urlify image1.png)" "$(urlify image2.png)"
   ```
 
   building out `urlify` is a task. i think there are multiple approaches that could be taken here.
