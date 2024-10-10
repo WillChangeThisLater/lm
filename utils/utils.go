@@ -4,12 +4,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"image/png"
 	"log"
 	"mime"
 	"os"
 	"path/filepath"
 
 	openai "github.com/WillChangeThisLater/lm/openai"
+	"github.com/kbinani/screenshot"
 )
 
 func Query(modelId string, query string) (string, error) {
@@ -48,4 +50,28 @@ func GetImageURL(imagePath string) (string, error) {
 	// Format the result for web page embedding
 	imageSrc := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
 	return imageSrc, nil
+}
+
+func TakeScreenshots() ([]string, error) {
+	n := screenshot.NumActiveDisplays()
+
+	fileNames := make([]string, 0)
+	for i := 0; i < n; i++ {
+		bounds := screenshot.GetDisplayBounds(i)
+
+		img, err := screenshot.CaptureRect(bounds)
+		if err != nil {
+			return nil, err
+		}
+		fileName := fmt.Sprintf("/tmp/screenshot_%d_%dx%d.png", i, bounds.Dx(), bounds.Dy())
+		file, _ := os.Create(fileName)
+		defer file.Close()
+		png.Encode(file, img)
+		fileNames = append(fileNames, fileName)
+
+		// Ew.
+		//log.Printf("#%d : %v \"%s\"\n", i, bounds, fileName)
+	}
+
+	return fileNames, nil
 }

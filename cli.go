@@ -46,6 +46,7 @@ func main() {
 	promptOnlyPtr := flag.Bool("prompt-only", false, "If set, prompt will not be fed to LLM and will just be output to stdout")
 	imageURLsPtr := flag.String("imageURLs", "", "Define one or more image URLs. Usage: --imageURLS \"url1,url2,url3\"")
 	imageFilesPtr := flag.String("imageFiles", "", "Define one or more image files. Usage: --imageFiles \"file1,file2,file3\"")
+	screenshotPtr := flag.Bool("screenshot", false, "If set, screenshots of all monitors will be taken and used as image file input")
 
 	// Parse flags
 	flag.Parse()
@@ -93,6 +94,22 @@ func main() {
 			url, err := utils.GetImageURL(fileName)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not generate base64 encoding for file %s: %v\n", fileName, err)
+				os.Exit(1)
+			}
+			imageURLs = append(imageURLs, url)
+		}
+	}
+
+	if *screenshotPtr {
+		screenshots, err := utils.TakeScreenshots()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Could not generate screenshots: %v\n", err)
+			os.Exit(1)
+		}
+		for _, fileName := range screenshots {
+			url, err := utils.GetImageURL(fileName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Could not generate base64 encoding for screenshot %s: %v\n", fileName, err)
 				os.Exit(1)
 			}
 			imageURLs = append(imageURLs, url)
