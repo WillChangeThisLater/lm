@@ -128,7 +128,8 @@ func SiteScreenshots(urls []string) ([]string, error) {
 	// sometimes this will fail for one or more URLs
 	// don't freak out, just write a warning and soldier on
 	if len(urls) != len(paths) {
-		log.Printf("Warning: it looks like gowitness could not screenshot some URLs (expected %d screenshots, got %d)\n", err, len(urls), len(paths))
+		log.Printf("It looks like gowitness could not screenshot some URLs (expected %d screenshots, got %d)\n", err, len(urls), len(paths))
+		return nil, errors.New(fmt.Sprintf("One or more sites could not be screenshotted"))
 	}
 	return paths, nil
 }
