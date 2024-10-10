@@ -35,7 +35,7 @@ func readStdinWithTimeout(timeout int) (string, error) {
 
 func main() {
 	// Define flags
-	modelPtr := flag.String("model", "gpt-4", "OpenAI model to use")
+	modelPtr := flag.String("model", "gpt-4o", "OpenAI model to use")
 	listModelsPtr := flag.Bool("list-models", false, "List all available models")
 	listPromptsPtr := flag.Bool("list-prompts", false, "List all available prompts")
 	timeoutPtr := flag.Int("timeout", 60, "Timeout for reading stdin")
