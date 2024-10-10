@@ -12,6 +12,7 @@ import (
 
 	openai "github.com/WillChangeThisLater/lm/openai"
 	prompts "github.com/WillChangeThisLater/lm/prompts"
+	utils "github.com/WillChangeThisLater/lm/utils"
 )
 
 func readStdin() string {
@@ -44,6 +45,7 @@ func main() {
 	promptPtr := flag.String("prompt", "", "If set, will feed model through a pre-defined prompt")
 	promptOnlyPtr := flag.Bool("prompt-only", false, "If set, prompt will not be fed to LLM and will just be output to stdout")
 	imageURLsPtr := flag.String("imageURLs", "", "Define one or more image URLs. Usage: --imageURLS \"url1,url2,url3\"")
+	imageFilesPtr := flag.String("imageFiles", "", "Define one or more image files. Usage: --imageFiles \"file1,file2,file3\"")
 
 	// Parse flags
 	flag.Parse()
@@ -82,6 +84,16 @@ func main() {
 		if url != "" {
 			imageURLs = append(imageURLs, url)
 		}
+	}
+
+	// To the existing url list, add encoded images
+	for _, fileName := range strings.Split(*imageFilesPtr, ",") {
+		url, err := utils.GetImageURL(fileName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Could not generate base64 encoding for file %s: %v\n", fileName, err)
+			os.Exit(1)
+		}
+		imageURLs = append(imageURLs, url)
 	}
 
 	// TODO: for some specific prompts we may not want to do this...
