@@ -9,7 +9,7 @@ import (
 
 	//"io"
 
-	openai "github.com/WillChangeThisLater/go-llm/openai"
+	openai "github.com/WillChangeThisLater/lm/openai"
 	pongo2 "github.com/flosch/pongo2/v6"
 )
 

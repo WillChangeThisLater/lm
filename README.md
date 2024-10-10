@@ -4,12 +4,12 @@
 
 #### CLI
 ```bash
-echo "1 + 1" | go-llm
+echo "1 + 1" | lm
 ```
 
 ### Build
 ```bash
-cd ~/go-llm # or wherever you cloned this
+cd ~/lm # or wherever you cloned this
 go build
 ```
 

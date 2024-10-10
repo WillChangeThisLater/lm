@@ -1,7 +1,7 @@
 package utils
 
 import (
-	openai "github.com/WillChangeThisLater/go-llm/openai"
+	openai "github.com/WillChangeThisLater/lm/openai"
 )
 
 func Query(modelId string, query string) (string, error) {

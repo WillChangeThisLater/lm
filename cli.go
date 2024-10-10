@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	openai "github.com/WillChangeThisLater/go-llm/openai"
-	prompts "github.com/WillChangeThisLater/go-llm/prompts"
+	openai "github.com/WillChangeThisLater/lm/openai"
+	prompts "github.com/WillChangeThisLater/lm/prompts"
 )
 
 func readStdin() string {
