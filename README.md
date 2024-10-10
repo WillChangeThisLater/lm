@@ -78,3 +78,9 @@ EOF
 cat /tmp/schema.json | jq # make sure the schema JSON is valid
 echo "Rate the following review: 'McDonalds is truly a gem of the Gary, Indiana community. Wait times are 1 hour+, but are compensated with a delightfully soggy and slimy burger. The whole joint gives that nice 'haunted house' vibe that everyone so associated with quality resturaunts'" | lm --json-schema-file /tmp/schema.json --model gpt-4o-mini
 ```
+
+#### Site Input (experimental, uses gowitness to screenshot sites which can be flaky. you need chrome installed + potentially other setup for this to work)
+
+```bash
+echo "What does this author think about the future of neural networks? Give specifics on what he thinks neural networks will look like 30 years from now" | lm --sites "http://karpathy.github.io/2022/03/14/lecun1989/"
+```
