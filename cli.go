@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
 
-	openai "github.com/WillChangeThisLater/lm/openai"
-	prompts "github.com/WillChangeThisLater/lm/prompts"
+	models "github.com/WillChangeThisLater/lm/models"
 	utils "github.com/WillChangeThisLater/lm/utils"
 )
 
@@ -36,55 +37,59 @@ func readStdinWithTimeout(timeout int) (string, error) {
 
 func main() {
 	// Define flags
-	modelPtr := flag.String("model", "gpt-4o", "OpenAI model to use")
+	modelPtr := flag.String("model", "gpt-4o", "model to use")
 	listModelsPtr := flag.Bool("list-models", false, "List all available models")
-	listPromptsPtr := flag.Bool("list-prompts", false, "List all available prompts")
 	timeoutPtr := flag.Int("timeout", 60, "Timeout for reading stdin")
-	jsonOutputPtr := flag.Bool("json-output", false, "If true, model will output JSON")
-	jsonSchemaPtr := flag.String("json-schema-file", "", "If set, will output results based on JSON schema")
-	promptPtr := flag.String("prompt", "", "If set, will feed model through a pre-defined prompt")
-	promptOnlyPtr := flag.Bool("prompt-only", false, "If set, prompt will not be fed to LLM and will just be output to stdout")
+	promptPtr := flag.String("prompt", "", "Append prompt to stdin")
 	imageURLsPtr := flag.String("imageURLs", "", "Define one or more image URLs. Usage: --imageURLS \"url1,url2,url3\"")
 	imageFilesPtr := flag.String("imageFiles", "", "Define one or more image files. Usage: --imageFiles \"file1,file2,file3\"")
 	screenshotPtr := flag.Bool("screenshot", false, "If set, screenshots of all monitors will be taken and used as image file input")
 	sitesPtr := flag.String("sites", "", "Define one or more sites to scrape")
+	cachePtr := flag.Bool("cache", false, "Enable persistent cache")
 
 	// Parse flags
 	flag.Parse()
 
 	// If --list-models is set, just list the models and exit
 	if *listModelsPtr {
-		fmt.Println(openai.ModelInfoString())
-		os.Exit(0)
-	}
-
-	// If --list-prompts is set, just list the prompts and exit
-	if *listPromptsPtr {
-		fmt.Println(prompts.ListPrompts())
+		fmt.Println(models.ModelInfoString())
 		os.Exit(0)
 	}
 
 	// Create model
-	model, err := openai.GetModel(*modelPtr)
+	model, err := models.GetModel(*modelPtr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not get model %s: %v\n", *modelPtr, err)
 		os.Exit(1)
 	}
 
-	// Figure out if we want JSON output or not
-	// if --json-output isn't set but --json-schema-file is, we assume the
-	// user (me!) wants JSON output
-	outputJSON := *jsonOutputPtr
-	if *jsonSchemaPtr != "" {
-		outputJSON = true
+	// figure out the location of the cache
+	usr, err := user.Current()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error fetching user details:", err)
+		os.Exit(1)
+	}
+	defaultCachePath := filepath.Join(usr.HomeDir, ".cache", "your_program_name")
+
+	// get the cache
+	var cache *utils.Cache
+	if *cachePtr {
+		var err error
+		cache, err = utils.NewCache(defaultCachePath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error initializing cache:", err)
+			os.Exit(1)
+		}
+		defer cache.Close()
 	}
 
 	// Collect image URLs, if any
-	imageURLs := make([]string, 0)
+	images := make([]models.ImageContent, 0)
 	for _, url := range strings.Split(*imageURLsPtr, ",") {
 		url = strings.TrimSpace(url)
 		if url != "" {
-			imageURLs = append(imageURLs, url)
+			imageContent := models.ImageContent{Type: "image_url", ImageURL: models.ImageURL{URL: url}}
+			images = append(images, imageContent)
 		}
 	}
 
@@ -92,12 +97,13 @@ func main() {
 	for _, fileName := range strings.Split(*imageFilesPtr, ",") {
 		fileName = strings.TrimSpace(fileName)
 		if fileName != "" {
-			url, err := utils.GetImageURL(fileName)
+
+			imageContentPtr, err := utils.GetImageContent(fileName)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not generate base64 encoding for file %s: %v\n", fileName, err)
 				os.Exit(1)
 			}
-			imageURLs = append(imageURLs, url)
+			images = append(images, *imageContentPtr)
 		}
 	}
 
@@ -116,12 +122,12 @@ func main() {
 			os.Exit(1)
 		}
 		for _, fileName := range fileNames {
-			encoded, err := utils.GetImageURL(fileName)
+			imageContentPtr, err := utils.GetImageContent(fileName)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not generate base64 encoding for file %s: %v\n", fileName, err)
 				os.Exit(1)
 			}
-			imageURLs = append(imageURLs, encoded)
+			images = append(images, *imageContentPtr)
 		}
 	}
 
@@ -132,12 +138,12 @@ func main() {
 			os.Exit(1)
 		}
 		for _, fileName := range screenshots {
-			url, err := utils.GetImageURL(fileName)
+			imageContentPtr, err := utils.GetImageContent(fileName)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not generate base64 encoding for screenshot %s: %v\n", fileName, err)
 				os.Exit(1)
 			}
-			imageURLs = append(imageURLs, url)
+			images = append(images, *imageContentPtr)
 		}
 	}
 
@@ -149,64 +155,39 @@ func main() {
 		os.Exit(1)
 	}
 
-	// If the user only wants to see the prompt, print it and exit
-	if *promptOnlyPtr {
-		fmt.Println(queryString)
-		os.Exit(0)
+	// Append additional prompt if requested
+	if *promptPtr != "" {
+		queryString += *promptPtr
 	}
 
-	// Use prompt if we must
-	if *promptPtr != "" {
-		response, err := prompts.Query(queryString, *promptPtr, imageURLs...)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Query using prompt %s failed: %v\n", *promptPtr, err)
-			os.Exit(1)
+	// Look in cache if specified
+	if *cachePtr {
+		if cachedResponse, err := cache.Get(queryString); err == nil {
+			fmt.Println(cachedResponse)
+			os.Exit(0)
 		}
-		fmt.Println(response)
-		os.Exit(0)
 	}
 
 	// flight check!
-	needsImageOutput := len(imageURLs) > 0
-	needsUnstructuredJson := *jsonOutputPtr
-	needsStructuredJson := *jsonSchemaPtr != ""
-	validModel, reason := model.FlightCheck(needsImageOutput, needsUnstructuredJson, needsStructuredJson)
+	// this makes sure the model that we are using can produce the output we want
+	needsImageOutput := len(images) > 0
+	validModel, reason := model.FlightCheck(needsImageOutput, false, false)
 	if !validModel {
 		fmt.Fprintf(os.Stderr, "Model %s cannot be used for your query: %s\n", model.ModelId, reason)
-		suggestedModel, err := openai.SuggestedModel(needsImageOutput, needsUnstructuredJson, needsStructuredJson)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not find model to use")
-			os.Exit(1)
-		}
-		fmt.Fprintf(os.Stderr, fmt.Sprintf("Using model %s\n", suggestedModel.ModelId))
-		model = suggestedModel
+		os.Exit(1)
+		//suggestedModel, err := models.SuggestedModel(needsImageOutput, false, false)
+		//if err != nil {
+		//	fmt.Fprintf(os.Stderr, "Could not find model to use")
+		//	os.Exit(1)
+		//}
+		//fmt.Fprintf(os.Stderr, fmt.Sprintf("Using model %s\n", suggestedModel.ModelId))
+		//model = suggestedModel
 	}
 
 	// create the query object
-	var query *openai.Query
-	if outputJSON {
-		jsonSchemaFile := *jsonSchemaPtr
-		var schema *openai.JSONSchema
-		if jsonSchemaFile != "" {
-			file, err := os.Open(jsonSchemaFile)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Could not open json schema file %s: %v\n", jsonSchemaFile, err)
-				os.Exit(1)
-			}
-			defer file.Close()
+	var query *models.Query
+	query, err = model.MakeQuery(queryString, images...)
 
-			schemaBytes, err := io.ReadAll(file)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Could not read json schema file %s: %v\n", jsonSchemaFile, err)
-				os.Exit(1)
-			}
-			schema = &openai.JSONSchema{Name: "json_schema", Schema: schemaBytes, Strict: true}
-		}
-		query, err = model.MakeJSONQuery(queryString, schema, imageURLs...)
-
-	} else {
-		query, err = model.MakeQuery(queryString, imageURLs...)
-	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not create query: %v\n", err)
 		os.Exit(1)
@@ -220,4 +201,11 @@ func main() {
 
 	// Write the response
 	fmt.Println(response)
+
+	// store in cache if --cache was defined
+	if *cachePtr {
+		if err := cache.Set(queryString, response); err != nil {
+			fmt.Fprintln(os.Stderr, "Error writing to cache:", err)
+		}
+	}
 }
